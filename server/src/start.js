@@ -25,24 +25,23 @@ export const start = async () => {
     const typeDefs = [
       `
       type Query {
-        getPost(_id: String): Post
+        getPost(_id: String): Post!
         getAllPosts: [Post]
-        getComment(_id: String): Comment
+        getComment(_id: String!): Comment!
         getAllComments: [Comment]
       }
 
       type Post {
-        _id: String
-        title: String
-        content: String
+        _id: ID!
+        title: String!
+        content: String!
         comments: [Comment]
       }
 
       type Comment {
-        _id: String
-        postId: String
+        _id: ID!
+        postId: ID!
         content: String
-        post: Post
       }
 
       type Mutation {
@@ -78,11 +77,6 @@ export const start = async () => {
           return (await Comments.find({ postId: _id }).toArray()).map(prepare)
         },
       },
-      Comment: {
-        post: async ({ postId }) => {
-          return prepare(await Posts.findOne(ObjectId(postId)))
-        },
-      },
       Mutation: {
         createPost: async (root, args, context, info) => {
           const res = await Posts.insertOne(args)
@@ -93,7 +87,6 @@ export const start = async () => {
           return await Comments.findOne({ _id: res.insertedIds[1] })
         },
         deletePost: async (root, { _id }) => {
-          // await Comments.findOneAndDelete
           return await Posts.findOneAndDelete(ObjectId(_id))
         },
       },
