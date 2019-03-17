@@ -19,35 +19,36 @@ export const start = async () => {
   try {
     const db = await MongoClient.connect(MONGO_URL)
 
-    const Posts = db.collection('posts')
-    const Comments = db.collection('comments')
+    const Todos = db.collection(process.env.TODOS_COLLECTION_NAME)
+    const Comments = db.collection(process.env.COMMENTS_COLLECTION_NAME)
 
     const typeDefs = [
       `
       type Query {
-        getPost(_id: String): Post!
-        getAllPosts: [Post]
+        getTodo(_id: String): Todo!
+        getAllTodos: [Todo]
         getComment(_id: String!): Comment!
         getAllComments: [Comment]
       }
 
-      type Post {
+      type Todo {
         _id: ID!
         title: String!
-        content: String!
+        content: String
         comments: [Comment]
       }
 
       type Comment {
         _id: ID!
-        postId: ID!
+        todoId: ID!
         content: String
+        todo: Todo!
       }
 
       type Mutation {
-        deletePost(postId: String): Post
-        createPost(title: String, content: String): Post
-        createComment(postId: String, content: String): Comment
+        deleteTodo(todoId: ID!): Todo
+        createTodo(title: String!, content: String): Todo
+        createComment(todoId: ID!, content: String): Comment
       }
 
       schema {
@@ -59,11 +60,11 @@ export const start = async () => {
 
     const resolvers = {
       Query: {
-        getPost: async (root, { _id }) => {
-          return prepare(await Posts.findOne(ObjectId(_id)))
+        getTodo: async (root, { _id }) => {
+          return prepare(await Todos.findOne(ObjectId(_id)))
         },
-        getAllPosts: async () => {
-          return (await Posts.find({}).toArray()).map(prepare)
+        getAllTodos: async () => {
+          return (await Todos.find({}).toArray()).map(prepare)
         },
         getComment: async (root, { _id }) => {
           return prepare(await Comments.findOne(ObjectId(_id)))
@@ -72,22 +73,28 @@ export const start = async () => {
           return (await Comments.find({}).toArray()).map(prepare)
         },
       },
-      Post: {
+      Todo: {
         comments: async ({ _id }) => {
-          return (await Comments.find({ postId: _id }).toArray()).map(prepare)
+          return (await Comments.find({ todoId: _id }).toArray()).map(prepare)
+        },
+      },
+      Comment: {
+        todo: async ({ todoId }) => {
+          return prepare(await Todos.findOne(ObjectId(todoId)))
         },
       },
       Mutation: {
-        createPost: async (root, args, context, info) => {
-          const res = await Posts.insertOne(args)
+        createTodo: async (root, args, context, info) => {
+          const res = await Todos.insertOne(args)
           return prepare(res.ops[0])
         },
         createComment: async (root, args) => {
           const res = await Comments.insert(args)
           return await Comments.findOne({ _id: res.insertedIds[1] })
         },
-        deletePost: async (root, { _id }) => {
-          return await Posts.findOneAndDelete(ObjectId(_id))
+        deleteTodo: async (root, { _id }) => {
+          //TODO: do not delete object, update instead
+          return await Todos.findOneAndDelete(ObjectId(_id))
         },
       },
     }
@@ -107,7 +114,7 @@ export const start = async () => {
     )
 
     app.listen(PORT, () => {
-      console.log(`Visit ${URL}:${PORT}${homePath}`)
+      console.log(`App is running on port : ${URL}:${PORT}${homePath} 🚀`)
     })
   } catch (e) {
     console.log(e)
