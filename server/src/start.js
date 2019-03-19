@@ -5,7 +5,7 @@ import bodyParser from 'body-parser'
 import { graphqlExpress, graphiqlExpress } from 'graphql-server-express'
 import { makeExecutableSchema } from 'graphql-tools'
 import cors from 'cors'
-import { prepare } from '../utils/index'
+import { prepare, getDate } from '../utils/index'
 
 const app = express()
 
@@ -21,7 +21,6 @@ export const start = async () => {
 
     const Todos = db.collection(process.env.TODOS_COLLECTION_NAME)
     const Comments = db.collection(process.env.COMMENTS_COLLECTION_NAME)
-
     const typeDefs = [
       `
       type Query {
@@ -36,6 +35,7 @@ export const start = async () => {
         title: String!
         content: String
         comments: [Comment]
+        created: String!
       }
 
       type Comment {
@@ -43,12 +43,13 @@ export const start = async () => {
         todoId: ID!
         content: String
         todo: Todo!
+        created: String!
       }
 
       type Mutation {
         deleteTodo(todoId: ID!): Todo
         createTodo(title: String!, content: String): Todo
-        createComment(todoId: ID!, content: String): Comment
+        createComment(todoId: ID!, content: String!): Comment
       }
 
       schema {
@@ -84,13 +85,21 @@ export const start = async () => {
         },
       },
       Mutation: {
-        createTodo: async (root, args, context, info) => {
-          const res = await Todos.insertOne(args)
-          return prepare(res.ops[0])
+        createTodo: async (root, { title, content }, context, info) => {
+          const res = await Todos.insertOne({
+            title,
+            content,
+            created: getDate(),
+          })
+          return await Todos.findOne({ _id: res.insertedId })
         },
-        createComment: async (root, args) => {
-          const res = await Comments.insert(args)
-          return await Comments.findOne({ _id: res.insertedIds[1] })
+        createComment: async (root, { todoId, content }) => {
+          const res = await Comments.insertOne({
+            todoId,
+            content,
+            created: getDate(),
+          })
+          return await Comments.findOne({ _id: res.insertedId })
         },
         deleteTodo: async (root, { _id }) => {
           //TODO: do not delete object, update instead
