@@ -60,6 +60,8 @@ export const start = async () => {
         createTodo(title: String!, content: String): Todo
         createComment(todoId: ID!, content: String!): Comment
         updateState(todoId: ID!, state: State!): Todo
+        editTodoTitle(todoId: ID!, title: String!): Todo 
+        editTodoContent(todoId: ID!, content: String): Todo 
       }
 
       schema {
@@ -108,6 +110,22 @@ export const start = async () => {
         updateState: async (root, { todoId, state }, context, info) => {
           const res = await Todos.findOneAndUpdate(ObjectId(todoId), {
             $set: { state, lastUpdate: getDate() },
+          })
+          return await Todos.findOne({
+            _id: res.value._id,
+          })
+        },
+        editTodoTitle: async (root, { todoId, title }, context, info) => {
+          let res = await Todos.findOneAndUpdate(ObjectId(todoId), {
+            $set: { title, lastUpdate: getDate() },
+          })
+          return await Todos.findOne({
+            _id: res.value._id,
+          })
+        },
+        editTodoContent: async (root, { todoId, content }, context, info) => {
+          let res = await Todos.findOneAndUpdate(ObjectId(todoId), {
+            $set: { content, lastUpdate: getDate() },
           })
           return await Todos.findOne({
             _id: res.value._id,
