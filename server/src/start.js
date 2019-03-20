@@ -23,6 +23,13 @@ export const start = async () => {
     const Comments = db.collection(process.env.COMMENTS_COLLECTION_NAME)
     const typeDefs = [
       `
+      enum State {
+        TODO
+        PROGRESS
+        REVIEW
+        DONE
+      }
+      
       type Query {
         getTodo(_id: String): Todo!
         getAllTodos: [Todo]
@@ -36,6 +43,8 @@ export const start = async () => {
         content: String
         comments: [Comment]
         created: String!
+        state: State!
+        lastUpdate: String
       }
 
       type Comment {
@@ -50,6 +59,7 @@ export const start = async () => {
         deleteTodo(todoId: ID!): Todo
         createTodo(title: String!, content: String): Todo
         createComment(todoId: ID!, content: String!): Comment
+        updateState(todoId: ID!, state: State!): Todo
       }
 
       schema {
@@ -89,9 +99,19 @@ export const start = async () => {
           const res = await Todos.insertOne({
             title,
             content,
+            state: 'TODO',
             created: getDate(),
+            lastUpdate: getDate(),
           })
           return await Todos.findOne({ _id: res.insertedId })
+        },
+        updateState: async (root, { todoId, state }, context, info) => {
+          const res = await Todos.findOneAndUpdate(ObjectId(todoId), {
+            $set: { state, lastUpdate: getDate() },
+          })
+          return await Todos.findOne({
+            _id: res.value._id,
+          })
         },
         createComment: async (root, { todoId, content }) => {
           const res = await Comments.insertOne({
@@ -102,7 +122,6 @@ export const start = async () => {
           return await Comments.findOne({ _id: res.insertedId })
         },
         deleteTodo: async (root, { _id }) => {
-          //TODO: do not delete object, update instead
           return await Todos.findOneAndDelete(ObjectId(_id))
         },
       },
