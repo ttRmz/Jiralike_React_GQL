@@ -9,7 +9,7 @@ export default {
   },
   Mutation: {
     createTodo: async (parent, args, { models }) => {
-      return await models.Todo.create({ ...args, state: TODO })
+      return await models.Todo.create({ ...args })
     },
     updateTodo: async (parent, { id, ...args }, { models }) => {
       return await models.Todo.findByIdAndUpdate(id, { ...args }, { new: true })
